@@ -39,7 +39,9 @@ app.post("/analyze", async (req, res) => {
           ]
         }
       ],
-      responseMimeType: "application/json"
+      config: {
+        responseMimeType: "application/json"
+      }
     });
 
     const text = await response.text();
