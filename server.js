@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { GoogleGenAI, Type } = require("@google/genai");
+const { GoogleGenAI } = require("@google/genai");
 
 const app = express();
 app.use(cors());
@@ -15,34 +15,44 @@ app.post("/analyze", async (req, res) => {
   try {
     const { base64 } = req.body;
 
-    const rawBase64 = base64.split(",")[1];
+    if (!base64) {
+      return res.json({ success: false, error: "No image provided" });
+    }
+
+    const rawBase64 = base64.includes(",")
+      ? base64.split(",")[1]
+      : base64;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: rawBase64
-            }
-          },
-          { text: "Analyze this plant disease and return JSON." }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json"
-      }
+      model: "gemini-2.0-flash",
+      contents: [
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: rawBase64
+          }
+        },
+        { text: "Analyze this plant disease and return JSON." }
+      ],
+      responseMimeType: "application/json"
     });
 
-    res.json({ success: true, data: JSON.parse(response.text) });
+    let json;
+    try {
+      json = JSON.parse(response.text());
+    } catch (e) {
+      return res.json({ success: false, error: "Invalid JSON from Gemini" });
+    }
+
+    res.json({ success: true, data: json });
+
   } catch (err) {
-    console.error(err);
+    console.error("SERVER ERROR:", err);
     res.json({ success: false, error: "Analysis failed" });
   }
 });
 
-// برای Railway
+// Railway port
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("Server running on port " + port);
