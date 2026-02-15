@@ -7,8 +7,9 @@ app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 
 // Gemini API Key
-const apiKey = "AIzaSyCOzkZIWAiD3ttQbadSdrCELHHzhwGxXYE";
-const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_KEY || "AIzaSyCOzkZIWAiD3ttQbadSdrCELHHzhwGxXYE"
+});
 
 app.post("/analyze", async (req, res) => {
   try {
@@ -45,13 +46,7 @@ app.post("/analyze", async (req, res) => {
     });
 
     const text = await response.text();
-    let json;
-
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      return res.json({ success: false, error: "Invalid JSON from Gemini" });
-    }
+    const json = JSON.parse(text);
 
     res.json({ success: true, data: json });
 
@@ -61,7 +56,6 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-// Railway port
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("Server running on port " + port);
