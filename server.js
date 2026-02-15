@@ -26,7 +26,6 @@ app.post("/analyze", async (req, res) => {
       model: "gemini-2.0-flash",
       contents: [
         {
-          role: "user",
           parts: [
             {
               inlineData: {
