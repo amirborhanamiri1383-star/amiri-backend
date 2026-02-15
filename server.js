@@ -6,9 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 
-// کلید Gemini
+// Gemini API Key
 const apiKey = "AIzaSyCOzkZIWAiD3ttQbadSdrCELHHzhwGxXYE";
-
 const ai = new GoogleGenAI({ apiKey });
 
 app.post("/analyze", async (req, res) => {
@@ -27,19 +26,28 @@ app.post("/analyze", async (req, res) => {
       model: "gemini-2.0-flash",
       contents: [
         {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: rawBase64
-          }
-        },
-        { text: "Analyze this plant disease and return JSON." }
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: rawBase64
+              }
+            },
+            {
+              text: "Analyze this plant disease and return JSON only."
+            }
+          ]
+        }
       ],
       responseMimeType: "application/json"
     });
 
+    const text = await response.text();
     let json;
+
     try {
-      json = JSON.parse(response.text());
+      json = JSON.parse(text);
     } catch (e) {
       return res.json({ success: false, error: "Invalid JSON from Gemini" });
     }
