@@ -1,16 +1,3 @@
-const express = require("express");
-const cors = require("cors");
-const { GoogleGenAI } = require("@google/genai");
-
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "20mb" }));
-
-// Gemini API Key
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_KEY || "AIzaSyCOzkZIWAiD3ttQbadSdrCELHHzhwGxXYE"
-});
-
 app.post("/analyze", async (req, res) => {
   try {
     const { base64 } = req.body;
@@ -22,6 +9,30 @@ app.post("/analyze", async (req, res) => {
     const rawBase64 = base64.includes(",")
       ? base64.split(",")[1]
       : base64;
+
+    const prompt = `
+You are an expert plant pathologist. Analyze the plant image and return ONLY valid JSON.
+
+The JSON schema (keys in English, values can be Persian):
+
+{
+  "diseaseName": "نام بیماری (اگر مطمئن نیستی، بنویس ناشناخته)",
+  "scientificName": "نام علمی (در صورت امکان)",
+  "family": "خانواده و رده‌بندی کلی",
+  "affectedPart": "بخش درگیر گیاه (برگ، ساقه، ریشه، میوه، چند بخش و ...)",
+  "severity": "low | medium | high",
+  "description": "توضیح تخصصی درباره علائم و روند بیماری",
+  "lifeCycle": "نحوه زندگی، بقا، انتشار و شرایط رشد بیماری",
+  "prevention": "راهکارهای پیشگیری عمومی و ایمن",
+  "treatment": "راهکارهای درمانی عمومی و ایمن (بدون ذکر دوز دقیق سموم)",
+  "confidence": "درصد تقریبی اطمینان از 0 تا 100"
+}
+
+Important rules:
+- Output MUST be ONLY pure JSON. No extra text.
+- If you are not sure, use "ناشناخته" and lower confidence.
+- Do NOT give exact pesticide dosages. Only general safe guidance.
+`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
@@ -35,7 +46,7 @@ app.post("/analyze", async (req, res) => {
               }
             },
             {
-              text: "Analyze this plant disease and return JSON only."
+              text: prompt
             }
           ]
         }
@@ -46,17 +57,29 @@ app.post("/analyze", async (req, res) => {
     });
 
     const text = await response.text();
-    const json = JSON.parse(text);
+    console.log("GEMINI RAW TEXT:", text);
 
-    res.json({ success: true, data: json });
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      console.error("JSON PARSE ERROR:", e);
+      return res.json({
+        success: false,
+        error: "Invalid JSON from model"
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: json
+    });
 
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    res.json({ success: false, error: "Analysis failed" });
+    return res.json({
+      success: false,
+      error: "Analysis failed"
+    });
   }
-});
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log("Server running on port " + port);
 });
