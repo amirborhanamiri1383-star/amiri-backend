@@ -6,8 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 
-// اینجا کلید Gemini خودت رو بذار
-const apiKey = "اینجا_کلید_تو";
+// کلید Gemini
+const apiKey = "AIzaSyCOzkZIWAiD3ttQbadSdrCELHHzhwGxXYE";
 
 const ai = new GoogleGenAI({ apiKey });
 
@@ -42,6 +42,8 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+// برای Railway
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log("Server running on port " + port);
 });
